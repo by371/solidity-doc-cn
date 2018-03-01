@@ -8,10 +8,9 @@
 一个简单的智能合约
 ***********************
 
-Let us begin with the most basic example. It is fine if you do not understand everything
-right now, we will go into more detail later.
+让我们从最基本的例子开始。如果你现在不了解所有的事情，这很好，我们将在稍后详细介绍。
 
-Storage
+存储
 =======
 
 ::
@@ -30,70 +29,40 @@ Storage
         }
     }
 
-The first line simply tells that the source code is written for
-Solidity version 0.4.0 or anything newer that does not break functionality
-(up to, but not including, version 0.5.0). This is to ensure that the
-contract does not suddenly behave differently with a new compiler version. The keyword ``pragma`` is called that way because, in general,
-pragmas are instructions for the compiler about how to treat the
-source code (e.g. `pragma once <https://en.wikipedia.org/wiki/Pragma_once>`_).
+第一行简单地告诉我们，源代码是用Solidity版本0.4.0编写的， 或者是任何不会破坏功能（最高但不包括0.5.0版本）的新版本。 这是为了确保合约不会突然与新的编译器版本冲突。 关键字``pragma`` 是告诉编译器开始处理源代码的指令 (例如 `pragma once <https://en.wikipedia.org/wiki/Pragma_once>`_).
 
-A contract in the sense of Solidity is a collection of code (its *functions*) and
-data (its *state*) that resides at a specific address on the Ethereum
-blockchain. The line ``uint storedData;`` declares a state variable called ``storedData`` of
-type ``uint`` (unsigned integer of 256 bits). You can think of it as a single slot
-in a database that can be queried and altered by calling functions of the
-code that manages the database. In the case of Ethereum, this is always the owning
-contract. And in this case, the functions ``set`` and ``get`` can be used to modify
-or retrieve the value of the variable.
+在Solidity中合约实际上是以太坊区块链上的特定地址的代码（*functions*）和数据（*state*）的集合。``uint storedData;``这行代码声明了一个``storedData`` state变量（256位无符整型）.您可以将其视为数据库中的单个槽（solt）,通过调用管理数据库的代码的函数可以查询和修改它。以太坊合约的拥有者可以通过 ``set`` 和 ``get``函数修改或查询该变量的值。
 
-To access a state variable, you do not need the prefix ``this.`` as is common in
-other languages.
+要访问state变量，不需要像其他语言中常见的前缀 ``this.``。
 
-This contract does not do much yet (due to the infrastructure
-built by Ethereum) apart from allowing anyone to store a single number that is accessible by
-anyone in the world without a (feasible) way to prevent you from publishing
-this number. Of course, anyone could just call ``set`` again with a different value
-and overwrite your number, but the number will still be stored in the history
-of the blockchain. Later, we will see how you can impose access restrictions
-so that only you can alter the number.
+基于以太坊构建的基础架构，这个合约只干了一件事：允许任何人存储一个number，并且任何人都无法阻止你发表这个number。当然，现在任何人都可以 ``set``不同的值覆盖您的number，但number仍将存储在区块链的历史记录中。稍后，我们将看到如何强制实施访问限制，以便只有您可以更改这个number。
 
 .. note::
-    All identifiers (contract names, function names and variable names) are restricted to
-    the ASCII character set. It is possible to store UTF-8 encoded data in string variables.
+    所有标识符（合约名，函数名和变量名）都限制为ASCII字符集。可以将UTF-8编码的数据存储在字符串变量中。
 
 .. warning::
-    Be careful with using Unicode text as similarly looking (or even identical) characters can
-    have different code points and as such will be encoded as a different byte array.
+    使用Unicode文本时要小心，因为看起来类似（甚至相同）的字符可以具有不同的代码点(code points)，并且因此将被编码为不同的字节数组。
 
 .. index:: ! subcurrency
 
-Subcurrency Example
+代币发行例子
 ===================
 
-The following contract will implement the simplest form of a
-cryptocurrency. It is possible to generate coins out of thin air, but
-only the person that created the contract will be able to do that (it is trivial
-to implement a different issuance scheme).
-Furthermore, anyone can send coins to each other without any need for
-registering with username and password - all you need is an Ethereum keypair.
-
+以下合约是最简单的加密货币。创建合约者可以凭空产生代币（以此发行是没有价值的）。此外，只要有一个以太坊密钥对（Ethereum keypair），任何人都可以互相发送代币，而无需使用用户名和密码进行注册。
 
 ::
 
-    pragma solidity ^0.4.0;
+    pragma solidity ^0.4.20; //实际上应该是0.4.21 
 
     contract Coin {
-        // The keyword "public" makes those variables
-        // readable from outside.
+        // 关键字“public”使这些变量可以从外部读取
         address public minter;
         mapping (address => uint) public balances;
 
-        // Events allow light clients to react on
-        // changes efficiently.
+        // event允许轻客户端有效地对变化做出反应
         event Sent(address from, address to, uint amount);
 
-        // This is the constructor whose code is
-        // run only when the contract is created.
+        // 这是构造函数的代码只有在创建合约时才能运行
         function Coin() public {
             minter = msg.sender;
         }
@@ -107,62 +76,33 @@ registering with username and password - all you need is an Ethereum keypair.
             if (balances[msg.sender] < amount) return;
             balances[msg.sender] -= amount;
             balances[receiver] += amount;
-            Sent(msg.sender, receiver, amount);
+            emit Sent(msg.sender, receiver, amount);
         }
     }
 
-This contract introduces some new concepts, let us go through them one by one.
+这份合约引入了一些新的概念，让我们一一浏览。
 
-The line ``address public minter;`` declares a state variable of type address
-that is publicly accessible. The ``address`` type is a 160-bit value
-that does not allow any arithmetic operations. It is suitable for
-storing addresses of contracts or keypairs belonging to external
-persons. The keyword ``public`` automatically generates a function that
-allows you to access the current value of the state variable
-from outside of the contract.
-Without this keyword, other contracts have no way to access the variable.
-The code of the function generated by the compiler is roughly equivalent
-to the following::
+``address public minter;``这行声明一个可公开访问的地址类型的state变量。``address``类型是一个不允许任何算术运算的160位值。它适用于存储属于外部人员的合约地址或密钥对（keypairs）地址。关键字``public``自动生成一个函数，允许您从合约外部访问state变量的当前值。没有这个关键字，其他合约就无法访问该变量。编译器生成的函数的代码大致等同于以下内容::
 
     function minter() returns (address) { return minter; }
 
-Of course, adding a function exactly like that will not work
-because we would have a
-function and a state variable with the same name, but hopefully, you
-get the idea - the compiler figures that out for you.
+当然，像这样添加一个函数是行不通的，因为我们有一个名字相同的函数和state变量，但是希望您能够明白 - 编译器会为您解决这个问题
 
 .. index:: mapping
 
-The next line, ``mapping (address => uint) public balances;`` also
-creates a public state variable, but it is a more complex datatype.
-The type maps addresses to unsigned integers.
-Mappings can be seen as `hash tables <https://en.wikipedia.org/wiki/Hash_table>`_ which are
-virtually initialized such that every possible key exists and is mapped to a
-value whose byte-representation is all zeros. This analogy does not go
-too far, though, as it is neither possible to obtain a list of all keys of
-a mapping, nor a list of all values. So either keep in mind (or
-better, keep a list or use a more advanced data type) what you
-added to the mapping or use it in a context where this is not needed,
-like this one. The :ref:`getter function<getter-functions>` created by the ``public`` keyword
-is a bit more complex in this case. It roughly looks like the
-following::
+下一行``mapping (address => uint) public balances;`` 也创建了一个公共state变量，但它是一个更复杂的数据类型。该类型将地址映射为无符整型。映射可以看作 `hash tables <https://en.wikipedia.org/wiki/Hash_table>`_，它被虚拟初始化，这样每个可能的键都存在并映射到一个字节表示全为零的值。这种类比并不过分，因为它既不可能获得映射的所有键的list，也不可能获得所有值的list。因此，要么记住添加到映射中的内容（做的更好点，保留list或使用更高级的数据类型），要么在非必需环境中使用，就像由``public``关键字创建的:ref:`getter function<getter-functions>` 这样，有点复杂。它大致如下所示：
+::
 
     function balances(address _account) public view returns (uint) {
         return balances[_account];
     }
 
-As you see, you can use this function to easily query the balance of a
-single account.
+如您所见，您可以使用此功能轻松查询单个帐户的余额。
 
 .. index:: event
 
-The line ``event Sent(address from, address to, uint amount);`` declares
-a so-called "event" which is fired in the last line of the function
-``send``. User interfaces (as well as server applications of course) can
-listen for those events being fired on the blockchain without much
-cost. As soon as it is fired, the listener will also receive the
-arguments ``from``, ``to`` and ``amount``, which makes it easy to track
-transactions. In order to listen for this event, you would use ::
+``event Sent(address from, address to, uint amount);``这行声明了在``send``函数最后一行的“事件”（event） 。UI（当然也包括服务器应用程序）可以监听区块链上正在交易（being fired）的事件，而无需花费太多成本。一旦发生交易了，监听者也将收到 ``from``, ``to``和 ``amount``参数，并且，这使得跟踪交易变得容易。为了监听这个事件，你可以使用
+::
 
     Coin.Sent().watch({}, '', function(error, result) {
         if (!error) {
@@ -175,28 +115,13 @@ transactions. In order to listen for this event, you would use ::
         }
     })
 
-Note how the automatically generated function ``balances`` is called from
-the user interface.
+注意在UI如何调用自动生成的``balances``函数。
 
 .. index:: coin
 
-The special function ``Coin`` is the
-constructor which is run during creation of the contract and
-cannot be called afterwards. It permanently stores the address of the person creating the
-contract: ``msg`` (together with ``tx`` and ``block``) is a magic global variable that
-contains some properties which allow access to the blockchain. ``msg.sender`` is
-always the address where the current (external) function call came from.
+特殊函数``Coin``是在创建合约期间运行的构造函数，不能在事后调用。它永久存储合约创建者的地址：``msg``（ 与``tx``和``block``一起）是一个神奇的全局变量，其中包含一些允许访问区块链的属性。``msg.sender``始终是当前（外部）函数调用的来源地址。
 
-Finally, the functions that will actually end up with the contract and can be called
-by users and contracts alike are ``mint`` and ``send``.
-If ``mint`` is called by anyone except the account that created the contract,
-nothing will happen. On the other hand, ``send`` can be used by anyone (who already
-has some of these coins) to send coins to anyone else. Note that if you use
-this contract to send coins to an address, you will not see anything when you
-look at that address on a blockchain explorer, because the fact that you sent
-coins and the changed balances are only stored in the data storage of this
-particular coin contract. By the use of events it is relatively easy to create
-a "blockchain explorer" that tracks transactions and balances of your new coin.
+最后，实际可以被用户和合约调用的函数是``mint``和``send``。如果``mint``被合约创建者以外的任何人调用，则什么都不会发生。另一方面，任何人都可以使用（已经有一些这个代币的人）``send``将代币发送给其他人。请注意，如果您使用此合约将代币发送到某个地址，则当您在区块链浏览器中查看该地址时，您将看不到任何内容，因为您发送代币和已更改的余额仅存储在此数据存储中特定的代币合约。通过使用事件，创建追踪新代币交易和余额的“区块链浏览器”（"blockchain explorer"）相对容易。
 
 .. _blockchain-basics:
 
